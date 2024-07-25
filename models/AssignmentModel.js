@@ -8,6 +8,9 @@ const assignmentSchema = new mongoose.Schema({
   description: {
     type: String,
   },
+  totalScore: {
+    type: Number,
+  },
   dueDate: {
     type: Date,
     required: true,

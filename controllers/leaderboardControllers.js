@@ -20,6 +20,7 @@ async function getDateSpecificLeaderboard(req, res) {
       const { _id, student, ...rest } = submission.toObject({
         versionKey: false,
       });
+      console.log(submission.toObject());
       const { _id: studentId, ...restStudent } = student;
 
       const newStudent = {

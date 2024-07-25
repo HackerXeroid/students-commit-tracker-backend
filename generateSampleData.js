@@ -24,6 +24,7 @@ const generateData = async () => {
       const assignment = new Assignment({
         title: `Assignment ${i + 1}`,
         description: faker.lorem.sentence(),
+        totalScore: Math.floor(Math.random() * 6 + 5) * 10,
         dueDate: faker.date.future(),
       });
 
@@ -47,7 +48,7 @@ const generateData = async () => {
         )}/assignment-${assignment._id}`,
         score: faker.datatype.number({
           min: 0,
-          max: 100,
+          max: assignment.totalScore,
         }),
         feedback: faker.lorem.sentence(),
       });

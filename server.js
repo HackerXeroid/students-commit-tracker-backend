@@ -1,5 +1,6 @@
 const app = require("./app");
 const mongoose = require("mongoose");
+const { generateData } = require("./generateSampleData");
 
 const connectionString = process.env.MONGO_DB_CONNECTION_STRING.replace(
   "<USER>",
@@ -13,8 +14,9 @@ app.listen(PORT, () => {
 
   const db = mongoose.connection;
 
-  db.on("connected", () => {
+  db.on("connected", async () => {
     console.log("Connected to MongoDB successfully.");
+    // generateData();
   });
 
   db.on("error", () => {
