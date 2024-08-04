@@ -1,12 +1,16 @@
 import { Octokit } from "@octokit/rest";
 import { Buffer } from 'buffer';
+import dotenv from 'dotenv';
+
+// Load environment variables from .env file
+dotenv.config('.env');
 
 const octokit = new Octokit({
-  auth: process.env.GITHUB_TOKEN
+  auth: process.env.GITHUB_PAT
 });
 
-const owner = 'siddham-jain';
-const repo = 'multithreading-winnings';
+const owner = 'HackerXeroid';
+const repo = 'students-commit-tracker-backend';
 
 async function getLatestCommit(owner, repo) {
   try {
@@ -33,7 +37,7 @@ async function getTreeForCommit(owner, repo, sha) {
       recursive: 'true' // This will get all files, including those in subdirectories
     });
 
-    console.log("Tree fetched successfully");
+    // console.log("Tree fetched successfully");
     return response.data;
   } catch (error) {
     console.error('Error fetching tree:', error);
@@ -49,13 +53,70 @@ async function getBlobContent(owner, repo, sha) {
       file_sha: sha
     });
     const content = Buffer.from(response.data.content, 'base64').toString('utf-8');
-    console.log("Blob fetched successfully");
+    // console.log("Blob fetched successfully");
     return content;
   } catch (error) {
     console.error('Error fetching blob:', error);
     throw error;
   }
 }
+
+async function getFilePaths(owner, repo, sha) {
+  try {
+    const tree = await getTreeForCommit(owner, repo, sha);
+    const filePaths = [];
+
+    async function traverseTree(tree, parentPath = '') {
+      for (const item of tree.tree) {
+        const currentPath = `${parentPath}${item.path}`;
+        if (item.type === 'blob') {
+          filePaths.push(currentPath);
+        } else if (item.type === 'tree') {
+          const subtree = await getTreeForCommit(owner, repo, item.sha);
+          await traverseTree(subtree, `${currentPath}/`);
+        }
+      }
+    }
+
+    await traverseTree(tree);
+    return filePaths;
+  } catch (error) {
+    console.error('Error fetching file paths:', error);
+    throw error;
+  }
+}
+
+async function fetchContentFromTree(owner, repo, tree, parentPath = '') {
+  try {
+    // Filter out files with ".class" suffix
+    const filteredTree = tree.filter(file => !file.path.endsWith(".class"));
+
+    // Fetch and log content of each file
+    for (const file of filteredTree) {
+      const currentPath = `${parentPath}${file.path}`;
+      if (file.type === 'blob') {
+        const content = await getBlobContent(owner, repo, file.sha);
+        console.log(`file path: ${currentPath}\ncontent: ${content}`);
+      } else if (file.type === 'tree') {
+        // Fetch the subtree only when needed
+        const subtree = await getTreeForCommit(owner, repo, file.sha);
+        await fetchContentFromTree(owner, repo, subtree.tree, `${currentPath}/`);
+      }
+    }
+  } catch (error) {
+    console.error('An error occurred:', error);
+  }
+}
+
+async function checkRateLimit() {
+  try{
+    const rateLimit = await octokit.rest.rateLimit.get();
+    console.log('Remaining rate limit', rateLimit.data.resources.core.remaining);
+  } catch(err){
+    console.log(err);
+  }
+}
+
 
 async function main() {
   try {
@@ -67,21 +128,15 @@ async function main() {
     const tree = await getTreeForCommit(owner, repo, latestCommit.commit.tree.sha);
     console.log('Tree SHA:', tree.sha);
 
-    // Find Main.java in the tree
-    const mainJavaFile = tree.tree.find(file => file.path === "Main.java");
-
-    if (mainJavaFile) {
-      console.log('Main.java SHA:', mainJavaFile.sha);
-
-      // Get the content of Main.java
-      const content = await getBlobContent(owner, repo, mainJavaFile.sha);
-      console.log('Main.java content:', content);
-    } else {
-      console.log('Main.java not found in the repository');
-    }
+    // Fetch and log content of each file recursively from the filtered tree
+    await fetchContentFromTree(owner, repo, tree.tree);
   } catch (error) {
     console.error('An error occurred:', error);
   }
 }
 
-main();
+
+
+// main();
+// checkRateLimit();
+console.log(process.env.GITHUB_PAT);
