@@ -1,6 +1,8 @@
 const Assignment = require("../models/AssignmentModel");
 const Submission = require("../models/SubmissionModel");
+const User = require("../models/UserModel");
 
+// Student perspective assignments
 async function getAssignments(req, res) {
   try {
     const userId = req.body.userId;
