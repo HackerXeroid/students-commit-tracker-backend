@@ -15,6 +15,10 @@ const assignmentSchema = new mongoose.Schema({
     type: Date,
     required: true,
   },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
 });
 
 const Assignment = mongoose.model("Assignment", assignmentSchema);

@@ -4,7 +4,7 @@ const Assignment = require('../models/AssignmentModel'); // Ensure this path is 
 async function getAssignments(req, res) {
   try {
     // Fetch assignments from the database
-    const assignments = await Assignment.find();
+    const assignments = await Assignment.find().sort({ createdAt: -1 });
 
     // Modify the assignment objects to include an 'id' field instead of '_id'
     const assignmentsWithId = assignments.map(assignment => ({

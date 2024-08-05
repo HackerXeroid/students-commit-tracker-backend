@@ -26,6 +26,10 @@ const submissionSchema = new mongoose.Schema({
   feedback: {
     type: String,
   },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
 });
 
 const Submission = mongoose.model("Submission", submissionSchema);

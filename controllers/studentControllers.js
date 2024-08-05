@@ -57,4 +57,27 @@ async function getAssignments(req, res) {
   }
 }
 
-module.exports = { getAssignments };
+// Get all students
+async function getAllStudents(req, res) {
+  try {
+    const students = await User.find({ role: 'student' }).sort({ name: 1 });
+
+    const formattedStudents = students.map(student => ({
+      id: student._id.toString(), // Convert _id to a string
+      ...student.toObject()
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: formattedStudents,
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: "Error fetching students",
+      error: err.message,
+    });
+  }
+}
+
+module.exports = { getAssignments, getAllStudents };

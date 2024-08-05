@@ -14,5 +14,6 @@ router.post(
   authMiddleware,
   submissionControllers.submitOrUpdateAssignment
 );
+router.post("/grade", authMiddleware, submissionControllers.createAndGradeSubmission);
 
 module.exports = router;
