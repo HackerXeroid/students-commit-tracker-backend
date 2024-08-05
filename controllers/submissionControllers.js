@@ -100,12 +100,12 @@ async function getSubmissions(req, res) {
       .populate("assignment")
       .sort({ submissionDate: -1 });
 
-      const formattedSubmissions = submissions.map(submission => ({
-        id: submission._id.toString(),
-        studentId: submission.student,
-        assignmentId: submission.assignment,
-        ...submission.toObject()
-      }));
+    const formattedSubmissions = submissions.map((submission) => ({
+      id: submission._id.toString(),
+      studentId: submission.student,
+      assignmentId: submission.assignment,
+      ...submission.toObject(),
+    }));
 
     res.status(200).json({
       success: true,
@@ -125,10 +125,28 @@ async function getSubmissionById(req, res) {
     const studentId = req.params.id;
     if (!studentId) throw new Error("No parameter specified");
 
-    const submission = await Submission.findById({
+    const submission = await Submission.findOne({
       student: studentId,
     });
-  } catch (err) {}
+
+    if (!submission) {
+      return res.status(404).json({
+        success: false,
+        message: "Submission not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: submission,
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: "Error retrieving submission",
+      error: err.message,
+    });
+  }
 }
 
 async function createAndGradeSubmission(req, res) {
@@ -158,9 +176,10 @@ async function createAndGradeSubmission(req, res) {
       "Well done!",
       "Good attempt.",
       "Excellent effort!",
-      "Review needed."
+      "Review needed.",
     ];
-    const randomDescription = descriptions[Math.floor(Math.random() * descriptions.length)];
+    const randomDescription =
+      descriptions[Math.floor(Math.random() * descriptions.length)];
 
     // Create and save the submission
     const submission = new Submission({
@@ -197,5 +216,5 @@ module.exports = {
   createSubmission,
   getSubmissions,
   getSubmissionById,
-  createAndGradeSubmission
+  createAndGradeSubmission,
 };

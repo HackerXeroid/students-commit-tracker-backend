@@ -3,6 +3,11 @@ const router = express.Router();
 const submissionControllers = require("../controllers/submissionControllers");
 const authMiddleware = require("../middlewares/authMiddleware");
 
+router.post(
+  "/grade",
+  authMiddleware,
+  submissionControllers.createAndGradeSubmission
+);
 router.post("/", authMiddleware, submissionControllers.createSubmission);
 router.get("/", authMiddleware, submissionControllers.getSubmissions);
 router.get("/:id", authMiddleware, submissionControllers.getSubmissionById);
@@ -14,6 +19,5 @@ router.post(
   authMiddleware,
   submissionControllers.submitOrUpdateAssignment
 );
-router.post("/grade", authMiddleware, submissionControllers.createAndGradeSubmission);
 
 module.exports = router;
