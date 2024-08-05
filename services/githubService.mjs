@@ -3,7 +3,7 @@ import { Buffer } from 'buffer';
 import dotenv from 'dotenv';
 
 // Load environment variables from .env file
-dotenv.config('.env');
+dotenv.config();
 
 const octokit = new Octokit({
   auth: process.env.GITHUB_PAT
