@@ -5,41 +5,65 @@ async function getDateSpecificLeaderboard(req, res) {
     const date = req.query.date;
     if (!date) throw new Error("Date parameter is required");
 
-    const submissions = await Submission.find({
-      submissionDate: {
-        $gte: new Date(date + "T00:00:00Z"),
-        $lte: new Date(date + "T23:59:59Z"),
+    const startDate = new Date(date + "T00:00:00Z");
+    const endDate = new Date(date + "T23:59:59Z");
+
+    const leaderboard = await Submission.aggregate([
+      {
+        $match: {
+          submissionDate: {
+            $gte: startDate,
+            $lte: endDate,
+          },
+        },
       },
-    })
-      .populate("student", "name email")
-      .sort({
-        score: -1,
-      });
+      {
+        $group: {
+          _id: "$student",
+          score: { $sum: "$score" },
+          submissions: { $sum: 1 },
+        },
+      },
+      {
+        $sort: { score: -1 },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "_id",
+          foreignField: "_id",
+          as: "studentDetails",
+        },
+      },
+      {
+        $unwind: "$studentDetails",
+      },
+      {
+        $project: {
+          _id: 0,
+          id: "$_id",
+          score: 1,
+          submissions: 1,
+          student: {
+            id: "$studentDetails._id",
+            name: "$studentDetails.name",
+            email: "$studentDetails.email",
+          },
+        },
+      },
+    ]);
 
-    const leaderboard = submissions.map((submission, index) => {
-      const { _id, student, ...rest } = submission.toObject({
-        versionKey: false,
-      });
-      console.log(submission.toObject());
-      const { _id: studentId, ...restStudent } = student;
+    const rankedLeaderboard = leaderboard.map((entry, index) => ({
+      ...entry,
+      rank: index + 1,
+    }));
 
-      const newStudent = {
-        id: studentId,
-        ...restStudent,
-      };
-
-      return {
-        id: _id,
-        student: newStudent,
-        rank: index + 1,
-        ...rest,
-      };
-    });
+    console.log(rankedLeaderboard);
 
     res.status(200).json({
       success: true,
-      length: leaderboard.length,
-      data: leaderboard,
+      length: rankedLeaderboard.length,
+      data: rankedLeaderboard,
     });
   } catch (err) {
     res.status(400).json({

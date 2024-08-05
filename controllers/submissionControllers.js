@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const Assignment = require("../models/AssignmentModel");
 const Submission = require("../models/SubmissionModel");
 
@@ -152,7 +153,7 @@ async function getSubmissionById(req, res) {
 async function createAndGradeSubmission(req, res) {
   try {
     const { assignmentId, githubLink } = req.body;
-    const userId = req.body.userId; // Assuming you have the user's ID from authentication
+    const studentId = req.body.studentId;
 
     // Find the assignment
     const assignment = await Assignment.findById(assignmentId);
@@ -160,6 +161,13 @@ async function createAndGradeSubmission(req, res) {
       return res.status(404).json({
         success: false,
         message: "Assignment not found",
+      });
+    }
+
+    if (assignment.dueDate < new Date()) {
+      return res.status(400).json({
+        success: false,
+        message: "The deadline for this assignment has passed",
       });
     }
 
@@ -181,18 +189,26 @@ async function createAndGradeSubmission(req, res) {
     const randomDescription =
       descriptions[Math.floor(Math.random() * descriptions.length)];
 
-    // Create and save the submission
-    const submission = new Submission({
-      student: userId,
-      assignment: assignmentId,
+    console.log({
+      student: studentId,
+      assignment: assignmentId, //new mongoose.Types.ObjectId(assignmentId),
       submissionDate: new Date(),
       githubLink,
       score: randomScore,
       feedback: randomDescription,
     });
 
-    await submission.save();
+    // Create and save the submission
+    const submission = new Submission({
+      student: studentId,
+      assignment: assignmentId,
+      submissionDate: new Date(),
+      githubLink: githubLink,
+      score: randomScore,
+      feedback: randomDescription,
+    });
 
+    await submission.save();
     res.status(201).json({
       success: true,
       message: "Submission created and graded successfully",
@@ -203,6 +219,7 @@ async function createAndGradeSubmission(req, res) {
       },
     });
   } catch (err) {
+    console.log(err);
     res.status(500).json({
       success: false,
       message: "Error creating and grading submission",
