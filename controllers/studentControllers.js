@@ -19,6 +19,7 @@ async function getAssignments(req, res) {
       const now = new Date();
       let status = "Pending";
       let yourScore = null;
+      let feedback = "";
       let totalScore = assignment.totalScore;
       let githubLink = undefined;
 
@@ -30,19 +31,24 @@ async function getAssignments(req, res) {
       if (submission) {
         status = "Completed";
         yourScore = submission.score;
+        feedback = submission.feedback;
         githubLink = submission.githubLink;
       }
 
       return {
         id: assignment._id.toString(),
+        submissionId: submission?._id?.toString() || null,
         title: assignment.title,
         description: assignment.description,
         status,
+        feedback,
         dueDate: assignment.dueDate.toISOString(),
         yourScore,
         totalScore,
       };
     });
+
+    console.log(formattedAssignments);
 
     res.status(200).json({
       success: true,
@@ -60,11 +66,11 @@ async function getAssignments(req, res) {
 // Get all students
 async function getAllStudents(req, res) {
   try {
-    const students = await User.find({ role: 'student' }).sort({ name: 1 });
+    const students = await User.find({ role: "student" }).sort({ name: 1 });
 
-    const formattedStudents = students.map(student => ({
+    const formattedStudents = students.map((student) => ({
       id: student._id.toString(), // Convert _id to a string
-      ...student.toObject()
+      ...student.toObject(),
     }));
 
     res.status(200).json({

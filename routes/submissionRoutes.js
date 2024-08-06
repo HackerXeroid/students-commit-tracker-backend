@@ -4,15 +4,15 @@ const submissionControllers = require("../controllers/submissionControllers");
 const authMiddleware = require("../middlewares/authMiddleware");
 
 router.post(
-  "/grade",
+  "/create-and-grade",
   authMiddleware,
   submissionControllers.createAndGradeSubmission
 );
+router.post("/grade", authMiddleware, submissionControllers.gradeSubmission);
 router.post("/", authMiddleware, submissionControllers.createSubmission);
-router.get("/", authMiddleware, submissionControllers.getSubmissions);
+router.get("/", authMiddleware, submissionControllers.getStudentSubmissions);
+router.get("/all", authMiddleware, submissionControllers.getAllSubmissions);
 router.get("/:id", authMiddleware, submissionControllers.getSubmissionById);
-// router.put("/:id", authMiddleware, submissionControllers.updateSubmission);
-// router.delete("/:id", authMiddleware, submissionControllers.deleteSubmission);
 
 router.post(
   "/:assignmentId",

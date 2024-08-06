@@ -93,10 +93,36 @@ async function createSubmission(req, res) {
   }
 }
 
-async function getSubmissions(req, res) {
+async function getAllSubmissions(req, res) {
+  try {
+    const submissions = await Submission.find().sort({ submissionDate: -1 });
+
+    const formattedSubmissions = submissions.map((submission) => ({
+      id: submission._id.toString(),
+      assignmentId: submission.assignment,
+      studentId: submission.student,
+      ...submission.toObject(),
+    }));
+
+    console.log(formattedSubmissions);
+
+    res.status(200).json({
+      success: true,
+      length: formattedSubmissions.length,
+      data: formattedSubmissions,
+    });
+  } catch (err) {
+    res.status(400).json({
+      success: false,
+      message: err.message,
+    });
+  }
+}
+
+async function getStudentSubmissions(req, res) {
   try {
     const submissions = await Submission.find({
-      student: req.body.userId,
+      student: req.params.userId,
     })
       .populate("assignment")
       .sort({ submissionDate: -1 });
@@ -171,32 +197,14 @@ async function createAndGradeSubmission(req, res) {
       });
     }
 
-    // Simulate a delay of 2 seconds for "grading"
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    // Generate a random score between 0 and the assignment's total score
-    const randomScore = Math.floor(Math.random() * (assignment.totalScore + 1));
-
-    // Generate a random description
-    const descriptions = [
-      "Great work!",
-      "Needs improvement.",
-      "Well done!",
-      "Good attempt.",
-      "Excellent effort!",
-      "Review needed.",
-    ];
-    const randomDescription =
-      descriptions[Math.floor(Math.random() * descriptions.length)];
-
-    console.log({
-      student: studentId,
-      assignment: assignmentId, //new mongoose.Types.ObjectId(assignmentId),
-      submissionDate: new Date(),
+    const { grader } = await import("../services/gradingService.mjs");
+    const extraDetails = await grader(
       githubLink,
-      score: randomScore,
-      feedback: randomDescription,
-    });
+      assignment.description,
+      assignment.totalScore
+    );
+
+    if (!extraDetails) throw new Error("Unable to grade your submission");
 
     // Create and save the submission
     const submission = new Submission({
@@ -204,8 +212,8 @@ async function createAndGradeSubmission(req, res) {
       assignment: assignmentId,
       submissionDate: new Date(),
       githubLink: githubLink,
-      score: randomScore,
-      feedback: randomDescription,
+      score: extraDetails.score,
+      feedback: extraDetails.feedback,
     });
 
     await submission.save();
@@ -214,8 +222,8 @@ async function createAndGradeSubmission(req, res) {
       message: "Submission created and graded successfully",
       data: {
         submissionId: submission._id,
-        score: randomScore,
-        feedback: randomDescription,
+        score: extraDetails.score,
+        feedback: extraDetails.feedback,
       },
     });
   } catch (err) {
@@ -228,10 +236,76 @@ async function createAndGradeSubmission(req, res) {
   }
 }
 
+async function gradeSubmission(req, res) {
+  try {
+    console.log(req.body, "req.body");
+    const { submissionId, githubLink } = req.body;
+
+    // Find the existing submission
+    const submission = await Submission.findById(submissionId);
+    if (!submission) {
+      return res.status(404).json({
+        success: false,
+        message: "Submission not found",
+      });
+    }
+
+    // Find the associated assignment
+    const assignment = await Assignment.findById(submission.assignment);
+    if (!assignment) {
+      return res.status(404).json({
+        success: false,
+        message: "Assignment not found",
+      });
+    }
+
+    if (assignment.dueDate < new Date()) {
+      return res.status(400).json({
+        success: false,
+        message: "The deadline for this assignment has passed",
+      });
+    }
+
+    const { grader } = await import("../services/gradingService.mjs");
+    const extraDetails = await grader(
+      githubLink,
+      assignment.description,
+      assignment.totalScore
+    );
+
+    if (!extraDetails) throw new Error("Unable to grade your submission");
+
+    submission.score = extraDetails.score;
+    submission.feedback = extraDetails.feedback;
+    submission.githubLink = githubLink;
+
+    await submission.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Submission graded successfully",
+      data: {
+        submissionId: submission._id,
+        score: extraDetails.score,
+        feedback: extraDetails.feedback,
+      },
+    });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({
+      success: false,
+      message: "Error grading submission",
+      error: err.message,
+    });
+  }
+}
+
 module.exports = {
   submitOrUpdateAssignment,
   createSubmission,
-  getSubmissions,
+  getAllSubmissions,
+  getStudentSubmissions,
   getSubmissionById,
   createAndGradeSubmission,
+  gradeSubmission,
 };
